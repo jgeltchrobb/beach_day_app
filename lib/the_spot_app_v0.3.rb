@@ -22,15 +22,18 @@ options = { units: "metric", APPID: "c60d3ad619a65ce0a4f912801a20afaf" }
 descriptions = ["clear sky", "few clouds", "scattered clouds", "broken clouds", "shower rain", "rain", "thunderstorm", "snow", "mist"]
 
 wind_spd_kts = 1.94
-beaches = ["Tewantin", "Mooloolaba", "Donnybrook", "Margate", "Burleigh Heads", "Bilinga", "Byron Bay", "Ballina", "Evans Head", "Palmer Island"]
+beaches = ["Tewantin QLD", "Mooloolaba QLD", "Donnybrook QLD", "Margate QLD", "Burleigh Heads QLD", "Bilinga QLD", "Byron Bay NSW", "Ballina NSW", "Evans Head NSW", "Palmer Island NSW"]
 data_batch = []
 surf_results = []
 surf_hash = {}
 kite_results = []
+beach_locations = []
+distances = []
 kite_hash = {}
 beachday_results = []
 beachday_hash = {}
 formatted_data = {}
+name_count = 0
 surf_wind_max = 7
 surf_swell_min = 0.5
 kite_wind_min = 14
@@ -74,26 +77,29 @@ beaches_coords.each do |key, value|
     data_batch.push(OpenWeather::Current.geocode(value[:lat], value[:lon], options))
 end
 
-      ## get user coords
 data_batch.each do |hash|
     swell_height = rand(1..6)/2.0
+    hash["name"] = beaches[name_count]
     formatted_data[hash["name"]] = {"description": hash["weather"][0]["description"], "wind_spd_kts": hash["wind"]["speed"]* 1.94, "cloud_coverage": hash["clouds"]["all"], "temp_max": hash["main"]["temp_max"], "swell_height": swell_height}
+    name_count += 1
 end
-
+beaches.each do |beach|
+    beach_locations.push(Geokit::Geocoders::GoogleGeocoder.geocode(beach))
+end
 puts "Choose an activity"
 puts "Surf / Kite / Beachday"
 activity = gets.chomp.capitalize
-puts "Where are you now"
-      # geo_loc = Geokit::Geocoders::GoogleGeocoder.geocode(gets.chomp.capitalize)
-      # user_coords = geo_loc.ll
-      # puts user_coords.distance_to(-26.4,153.8)
-
+puts "Where are you now, e.g. brisbane QLD"
+user_loc = Geokit::Geocoders::GoogleGeocoder.geocode(gets.chomp.capitalize)
+beach_locations.each do |beach_loc|
+    distances.push(user_loc.distance_to(beach_loc))
+end
 if activity == "Surf"
     surf(surf_hash, beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
     count = 0
     surf_hash = {}
     surf_results.each do |result|
-      surf_hash[beaches[count]] = {suitable: result, distance: "10km"}
+      surf_hash[beaches[count]] = {suitable: result, distance: "#{('%.2f' % distances[count])} km"}
       count += 1
     end
     spots = {}
@@ -110,7 +116,7 @@ elsif activity == "Kite"
   count = 0
   kite_hash = {}
   kite_results.each do |result|
-    kite_hash[beaches[count]] = {suitable: result, distance: "10km"}
+    kite_hash[beaches[count]] = {suitable: result, distance: "#{('%.2f' % distances[count])} km"}
     count += 1
   end
   spots = {}
@@ -125,7 +131,7 @@ elsif activity == "Beachday"
   count = 0
   beachday_hash = {}
   beachday_results.each do |result|
-    beachday_hash[beaches[count]] = {suitable: result, distance: "10km"}
+    beachday_hash[beaches[count]] = {suitable: result, distance: "#{('%.2f' % distances[count])} km"}
     count += 1
   end
   spots = {}
