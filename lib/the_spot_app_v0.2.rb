@@ -25,8 +25,11 @@ wind_spd_kts = 1.94
 beaches = ["Tewantin", "Mooloolaba", "Donnybrook", "Margate", "Burleigh Heads", "Bilinga", "Byron Bay", "Ballina", "Evans Head", "Palmer Island"]
 data_batch = []
 surf_results = []
+surf_hash = {}
 kite_results = []
+kite_hash = {}
 beachday_results = []
+beachday_hash = {}
 formatted_data = {}
 surf_wind_max = 7
 surf_swell_min = 0.5
@@ -36,8 +39,8 @@ kite_swell_max = 2.5
 beachday_temp_min = 24
 beachday_cloud_max = 50
 beachday_wind_max = 15
-#surf
-def surf(beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
+    #surf
+def surf(surf_hash, beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
     beaches.each do |beach|
         if formatted_data[beach][:swell_height] > surf_swell_min && formatted_data[beach][:wind_spd_kts] < surf_wind_max && formatted_data[beach][:description] == descriptions[0] || formatted_data[beach][:description] == descriptions[1] || formatted_data[beach][:description] == descriptions[2] || formatted_data[beach][:description] == descriptions[3] || formatted_data[beach][:description] == descriptions[4] || formatted_data[beach][:description] == descriptions[5]
             surf_results.push("Y")
@@ -46,7 +49,7 @@ def surf(beaches, formatted_data, descriptions, surf_results, surf_swell_min, su
         end
     end
 end
-#kite
+      #kite
 def kite(beaches, formatted_data, descriptions, kite_results, kite_swell_max, kite_wind_max, kite_wind_min)
     beaches.each do |beach|
         if formatted_data[beach][:swell_height] < kite_swell_max && formatted_data[beach][:wind_spd_kts] < kite_wind_max && formatted_data[beach][:wind_spd_kts] > kite_wind_min&& formatted_data[beach][:description] == descriptions[0] || formatted_data[beach][:description] == descriptions[1] || formatted_data[beach][:description] == descriptions[2] || formatted_data[beach][:description] == descriptions[3] || formatted_data[beach][:description] == descriptions[4]
@@ -56,7 +59,7 @@ def kite(beaches, formatted_data, descriptions, kite_results, kite_swell_max, ki
         end
     end
 end
-#beachday
+      #beachday
 def beachday(beaches, formatted_data, descriptions, beachday_results, beachday_cloud_max, beachday_temp_min, beachday_wind_max)
     beaches.each do |beach|
         if formatted_data[beach][:temp_max] > beachday_temp_min && formatted_data[beach][:cloud_coverage] < beachday_cloud_max && formatted_data[beach][:wind_spd_kts] < beachday_wind_max && formatted_data[beach][:description] == descriptions[0] || formatted_data[beach][:description] == descriptions[1] || formatted_data[beach][:description] == descriptions[2]
@@ -71,7 +74,7 @@ beaches_coords.each do |key, value|
     data_batch.push(OpenWeather::Current.geocode(value[:lat], value[:lon], options))
 end
 
-## get user coords
+      ## get user coords
 data_batch.each do |hash|
     swell_height = rand(1..6)/2.0
     formatted_data[hash["name"]] = {"description": hash["weather"][0]["description"], "wind_spd_kts": hash["wind"]["speed"]* 1.94, "cloud_coverage": hash["clouds"]["all"], "temp_max": hash["main"]["temp_max"], "swell_height": swell_height}
@@ -81,17 +84,61 @@ puts "Choose an activity"
 puts "Surf / Kite / Beachday"
 activity = gets.chomp.capitalize
 puts "Where are you now"
-# geo_loc = Geokit::Geocoders::GoogleGeocoder.geocode(gets.chomp.capitalize)
-# user_coords = geo_loc.ll
-# puts user_coords.distance_to(-26.4,153.8)
+      # geo_loc = Geokit::Geocoders::GoogleGeocoder.geocode(gets.chomp.capitalize)
+      # user_coords = geo_loc.ll
+      # puts user_coords.distance_to(-26.4,153.8)
 
 if activity == "Surf"
-    surf(beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
-    puts surf_results
+    surf(surf_hash, beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
+    count = 0
+    surf_hash = {}
+    surf_results.each do |result|
+      surf_hash[beaches[count]] = {suitable: result, distance: "10km"}
+      count += 1
+    end
+    spots = {}
+    surf_hash.each do |key, value|
+      if value[:suitable] == "Y"
+        spots[key] = value[:distance]
+      end
+    end
+    puts spots
+
+
 elsif activity == "Kite"
-    kite(beaches, formatted_data, descriptions, kite_results, kite_wind_min, kite_wind_max, kite_swell_max)
-    puts kite_results
+  kite(kite_hash, beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
+  count = 0
+  kite_hash = {}
+  kite_results.each do |result|
+    kite_hash[beaches[count]] = {suitable: result, distance: "10km"}
+    count += 1
+  end
+  spots = {}
+  kite_hash.each do |key, value|
+    if value[:suitable] == "Y"
+      spots[key] = value[:distance]
+    end
+  end
+  puts spots
 elsif activity == "Beachday"
-    beachday(beaches, formatted_data, descriptions, beachday_results, beachday_cloud_max, beachday_wind_max, beachday_temp_min)
-    puts beachday_results
+  beachday(beachday_hash, beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
+  count = 0
+  beachday_hash = {}
+  beachday_results.each do |result|
+    beachday_hash[beaches[count]] = {suitable: result, distance: "10km"}
+    count += 1
+  end
+  spots = {}
+  beachday_hash.each do |key, value|
+    if value[:suitable] == "Y"
+      spots[key] = value[:distance]
+    end
+  end
+  puts spots
 end
+
+# WRITE A CLASS TO REDUCE REPETITION ???????
+
+# NOW I WILL, FOR EACH ONE, GET TO ANOTHER HASH FOR SUITABLE VALUES (Y)
+# = {TEWANTIN: __KM, MOOLOOLABA: __KM, ETC...}
+# THEN WE WILL NEED A METHOD TO SORT AND CHOOSE THE SHORTEST DISTANCE
