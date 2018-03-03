@@ -81,18 +81,18 @@ end
 beaches_coords.each do |key, value|
     data_batch.push(OpenWeather::Current.geocode(value[:lat], value[:lon], options))
 end
-# Format relevant data from data_batch into formatted_data
+# Format and push relevant data from data_batch into formatted_data
 data_batch.each do |hash|
     swell_height = rand(1..6)/2.0
     hash["name"] = beaches[name_count]
     formatted_data[hash["name"]] = {"description": hash["weather"][0]["description"], "wind_spd_kts": hash["wind"]["speed"]* 1.94, "cloud_coverage": hash["clouds"]["all"], "temp_max": hash["main"]["temp_max"], "swell_height": swell_height}
     name_count += 1
 end
-# Parse beach names through geokit
+# Parse beach names through geokit to generate beach_locations
 beaches.each do |beach|
     beach_locations.push(Geokit::Geocoders::GoogleGeocoder.geocode(beach))
 end
-# User input loop
+# User input loop to finalise input
 puts "Choose an activity:"
 loop do
     activity = gets.chomp.capitalize
@@ -101,40 +101,41 @@ loop do
         puts "Sorry, we currently only support 3 activities."
         puts ""
         sleep 1
-        puts "Please choose from the following:" 
-        puts "Surf / Kite / Beachday"           
+        puts "Please choose from the following:"
+        puts "Surf / Kite / Beachday"
     else
         system "clear"
         break
     end
 end
-# Parse users location through geokit
+# Parse users location through geokit to generate distances array
 puts "Where are you now? e.g. brisbane QLD"
 user_loc = Geokit::Geocoders::GoogleGeocoder.geocode(gets.chomp.capitalize)
 beach_locations.each do |beach_loc|
     distances.push(user_loc.distance_to(beach_loc))
 end
-# Run the surf method and output related data
+# Run the surf method to determine results and return final outputs
 if activity == "Surf"
     system "clear"
     surf(surf_hash, beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
     count = 0
-    #
+    # Generate surf_hash relating all locations to their respective result ("Y" or "N") and distance from user
     surf_results.each do |result|
       surf_hash[beaches[count]] = {suitable: result, distance: "#{('%.2f' % distances[count])} km"}
       count += 1
     end
-    #
+    # Generate spots hash with only suitable places (aka 'spots') and their distance from user
     surf_hash.each do |key, value|
       if value[:suitable] == "Y"
         spots[key] = value[:distance].to_f
       end
     end
-    #
+    # Generate spots_distances array with distance to user for each 'spot' (suitable place)
     spots.each do |key, value|
       spots_distances.push(value.to_f)
     end
-    #
+    # Sort spots_distances array and compare smallest distance to distances stored in spots hash to determine corresponding location name.
+    # Output closest location name and then all other 'spots' (suitable locations)
     spots.each do |key, value|
       if spots_distances.sort[0] == value
         puts ""
@@ -146,34 +147,35 @@ if activity == "Surf"
         others.push("#{key} - #{value.to_i} kms")
       end
     end
-    # No suitable locations
+    # If there are no suitable locations - Outpout
     if spots.length == 0
         puts "Sorry, there are currently no locations suitable for this activity"
     end
     puts others
     puts ""
     puts ""
-# Run the Kite method and output related data
+# Run the Kite method to determine results and return final outputs
 elsif activity == "Kite"
     system "clear"
   kite(kite_hash, beaches, formatted_data, descriptions, kite_results, kite_swell_max, kite_wind_max, kite_wind_min)
   count = 0
-  # !!Same as surf!!
+  # Generate surf_hash relating all locations to their respective result ("Y" or "N") and distance from user
   kite_results.each do |result|
     kite_hash[beaches[count]] = {suitable: result, distance: "#{('%.2f' % distances[count])} km"}
     count += 1
   end
-  # !!Same as surf!!
+  # Generate spots hash with only suitable places (aka 'spots') and their distance from user
   kite_hash.each do |key, value|
     if value[:suitable] == "Y"
       spots[key] = value[:distance].to_f
     end
   end
-  # !!Same as surf!!
+  # Generate spots_distances array with distance to user for each 'spot' (suitable place)
   spots.each do |key, value|
     spots_distances.push(value.to_f)
   end
-  # !!Same as surf!!
+  # Sort spots_distances array and compare smallest distance to distances stored in spots hash to determine corresponding location name.
+  # Output closest location name and then all other 'spots' (suitable locations)
   spots.each do |key, value|
     if spots_distances.sort[0] == value
       puts ""
@@ -185,34 +187,35 @@ elsif activity == "Kite"
       others.push("#{key} - #{value.to_i} kms")
     end
   end
-  # No suitable locations
+    # If there are no suitable locations - Outpout
     if spots.length == 0
     puts "Sorry, there are currently no locations suitable for this activity"
     end
   puts others
   puts ""
   puts ""
-# Run the Beachday method and output relevant data
+# Run the Beachday method to determine results and return final outputs
 elsif activity == "Beachday"
     system "clear"
   beachday(beachday_hash, beaches, formatted_data, descriptions, beachday_results, beachday_cloud_max, beachday_temp_min, beachday_wind_max)
   count = 0
-  # !!Same as surf!!
+  # Generate surf_hash relating all locations to their respective result ("Y" or "N") and distance from user
   beachday_results.each do |result|
     beachday_hash[beaches[count]] = {suitable: result, distance: "#{('%.2f' % distances[count])} km"}
     count += 1
   end
-  # !!Same as surf!!
+  # Generate spots hash with only suitable places (aka 'spots') and their distance from user
   beachday_hash.each do |key, value|
     if value[:suitable] == "Y"
       spots[key] = value[:distance].to_f
     end
   end
-  # !!Same as surf!!
+  # Generate spots_distances array with distance to user for each 'spot' (suitable place)
   spots.each do |key, value|
     spots_distances.push(value.to_f)
   end
-  # !!Same as surf!!
+  # Sort spots_distances array and compare smallest distance to distances stored in spots hash to determine corresponding location name.
+  # Output closest location name and then all other 'spots' (suitable locations)
   spots.each do |key, value|
     if spots_distances.sort[0] == value
       puts ""
@@ -224,7 +227,7 @@ elsif activity == "Beachday"
       others.push("#{key} - #{value.to_i} kms")
     end
   end
-  # No suitable locations
+  # If there are no suitable locations - Outpout
   if spots.length == 0
     puts "Sorry, there are currently no locations suitable for this activity"
     end
@@ -232,5 +235,3 @@ elsif activity == "Beachday"
   puts ""
   puts ""
 end
-
-# WRITE A CLASS TO REDUCE REPETITION ???????
