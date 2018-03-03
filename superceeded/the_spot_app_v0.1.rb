@@ -1,0 +1,97 @@
+require 'open_weather'
+require 'geokit'
+
+Geokit::default_units = :kms
+Geokit::Geocoders::request_timeout = 3
+Geokit::Geocoders::GoogleGeocoder.api_key = 'AIzaSyDJC7s7rtUPQr18ymAqPm_CHeqxx-s8RIE'
+
+
+beaches_coords = {
+    noosa: {lat:-26.3980, lon: 153.0930},
+    mooloolaba: {lat: -26.6820, lon: 153.1180},
+    bribie: {lat: -26.9861, lon: 153.1325},
+    suttons: {lat: -27.2360, lon: 153.1145},
+    burleigh: {lat: -28.1040, lon: 153.4360},
+    coolangatta: {lat: -28.1667, lon: 153.5333},
+    byron: {lat: -28.6474, lon: 153.6020},
+    ballina: {lat: -28.8380, lon: 153.5629},
+    evans_head: {lat: -29.1086, lon: 153.4217},
+    palmer_island: {lat: -29.4332, lon: 153.3406}
+}
+options = { units: "metric", APPID: "c60d3ad619a65ce0a4f912801a20afaf" }
+descriptions = ["clear sky", "few clouds", "scattered clouds", "broken clouds", "shower rain", "rain", "thunderstorm", "snow", "mist"]
+
+wind_spd_kts = 1.94
+beaches = ["Tewantin", "Mooloolaba", "Donnybrook", "Margate", "Burleigh Heads", "Bilinga", "Byron Bay", "Ballina", "Evans Head", "Palmer Island"]
+data_batch = []
+surf_results = []
+kite_results = []
+beachday_results = []
+formatted_data = {}
+surf_wind_max = 7
+surf_swell_min = 0.5
+kite_wind_min = 14
+kite_wind_max = 36
+kite_swell_max = 2.5
+beachday_temp_min = 24
+beachday_cloud_max = 50
+beachday_wind_max = 15
+#surf
+def surf(beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
+    beaches.each do |beach|
+        if formatted_data[beach][:swell_height] > surf_swell_min && formatted_data[beach][:wind_spd_kts] < surf_wind_max && formatted_data[beach][:description] == descriptions[0] || formatted_data[beach][:description] == descriptions[1] || formatted_data[beach][:description] == descriptions[2] || formatted_data[beach][:description] == descriptions[3] || formatted_data[beach][:description] == descriptions[4] || formatted_data[beach][:description] == descriptions[5]
+            surf_results.push("Y")
+        else
+            surf_results.push("N")
+        end
+    end
+end
+#kite
+def kite(beaches, formatted_data, descriptions, kite_results, kite_swell_max, kite_wind_max, kite_wind_min)
+    beaches.each do |beach|
+        if formatted_data[beach][:swell_height] < kite_swell_max && formatted_data[beach][:wind_spd_kts] < kite_wind_max && formatted_data[beach][:wind_spd_kts] > kite_wind_min&& formatted_data[beach][:description] == descriptions[0] || formatted_data[beach][:description] == descriptions[1] || formatted_data[beach][:description] == descriptions[2] || formatted_data[beach][:description] == descriptions[3] || formatted_data[beach][:description] == descriptions[4]
+            kite_results.push("Y")
+        else
+            kite_results.push("N")
+        end
+    end
+end
+#beachday
+def beachday(beaches, formatted_data, descriptions, beachday_results, beachday_cloud_max, beachday_temp_min, beachday_wind_max)
+    beaches.each do |beach|
+        if formatted_data[beach][:temp_max] > beachday_temp_min && formatted_data[beach][:cloud_coverage] < beachday_cloud_max && formatted_data[beach][:wind_spd_kts] < beachday_wind_max && formatted_data[beach][:description] == descriptions[0] || formatted_data[beach][:description] == descriptions[1] || formatted_data[beach][:description] == descriptions[2]
+            beachday_results.push("Y")
+        else
+            beach_dayresults.push("N")
+        end
+    end
+end
+
+beaches_coords.each do |key, value|
+    data_batch.push(OpenWeather::Current.geocode(value[:lat], value[:lon], options))
+end
+
+## get user coords
+data_batch.each do |hash|
+    swell_height = rand(1..6)/2.0
+    formatted_data[hash["name"]] = {"description": hash["weather"][0]["description"], "wind_spd_kts": hash["wind"]["speed"]* 1.94, "cloud_coverage": hash["clouds"]["all"], "temp_max": hash["main"]["temp_max"], "swell_height": swell_height}
+end
+
+puts "Choose an activity"
+puts "Surf / Kite / Beachday"
+activity = gets.chomp.capitalize
+puts "Where are you now"
+# geo_loc = Geokit::Geocoders::GoogleGeocoder.geocode(gets.chomp.capitalize)
+# user_coords = geo_loc.ll
+# puts user_coords.distance_to(-26.4,153.8)
+
+if activity == "Surf"
+    surf(beaches, formatted_data, descriptions, surf_results, surf_swell_min, surf_wind_max)
+    puts surf_results
+elsif activity == "Kite"
+    kite(beaches, formatted_data, descriptions, kite_results, kite_wind_min, kite_wind_max, kite_swell_max)
+    puts kite_results
+elsif activity == "Beachday"
+    beachday(beaches, formatted_data, descriptions, beachday_results, beachday_cloud_max, beachday_wind_max, beachday_temp_min)
+    puts beachday_results
+end
